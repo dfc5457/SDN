@@ -1,17 +1,8 @@
 
-login_user = 'danisports_'
-#login_user = 'daniela_carannante3'
-login_password = 'Statecollege24'
-#login_password = 'Carannante6302dede'
+login_user = 'sportsdatanow'
+login_password = 'Eship2021'
 
-
-#accounts = ['fanfanpodcast']
-#accounts = ['cappinduck']
-accounts = ['bear_betting']
-#accounts = ['thesystempicks']
-
-
-multiple_bets = ['thesystempicks','bear_betting']
+multiple_bets = ['thesystempicks','bear_betting','vipcappinduck']
 
 
 player_keywords = ['pts', 'assists', 'ast', 'threes', 'asts', 'rebounds', 'reb', 'pra', 'rebs', 'rbs',
@@ -19,7 +10,7 @@ player_keywords = ['pts', 'assists', 'ast', 'threes', 'asts', 'rebounds', 'reb',
     'passing touchdowns', 'double double', 'doubledouble', "double-double", 'points', 'first basket',
     'double double', 'points scored', 'homerun', 'homeruns','base','bases','hit','hits']
 
-game_keywords = ['nrfi','sgp','f5','f1','nrfi']
+game_keywords = ['nrfi','sgp','f5','f1','nrfi','1st half']
 
 platforms = ['draftkings']
 

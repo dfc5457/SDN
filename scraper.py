@@ -1,4 +1,5 @@
 from datetime import date
+from random import betavariate
 from selenium.webdriver.chrome.service import Service
 from selenium import webdriver
 from selenium.webdriver.common.by import By
@@ -20,9 +21,7 @@ class Scraper:
         self.open_target_profile(self.target)
         print("successfully completed")
         self.driver.close()
-        
         print("sorting through text now...")
-
 
         self.sortBet(self.target,date)
 
@@ -87,7 +86,53 @@ class Scraper:
             line = line.replace("'","")
         if line[line.find("-") - 1] != "":
             line = line.replace("-"," -")
+        while line.find('Picks') != -1:
+            line = line[line.find('Picks') + 5 :].strip()
+        while line.find("............") != -1:
+            line = line.replace("............","")
         return line
+
+    
+    # function takes in bet object and line of text
+    # calls all the necessary functions from bet class
+    def process(self,betObj,line):
+        betObj.getUnits(line)
+        betObj.getOverUnder(line)
+        betObj.getOdds(line)
+        betObj.getNumber(line)
+        betObj.getPick(line)
+        betObj.getBetType(line)
+        betObj.removeEmoji()
+        betObj.getGameID()
+
+    # function takes in bet object and line of text
+    # sorts through known values to get the next possible bet in the line
+    def getTemp(self,betObj,line):
+        val = None
+        minVal = len(line)
+
+        for i in [betObj.units,'ML',betObj.overUnder,betObj.odds]:
+            if line.find(i) < minVal and line.find(i) != 0 and line.find(i) != -1:
+                minVal = line.find(i)
+                val = i
+        temp = ""
+        if betObj.units == val:
+            if betObj.units == "1u" and line.find("1น") != -1:
+                temp = line[:(line.find("1น") + 2)] 
+            else:
+                temp = line[:(line.find(betObj.units) + len(betObj.units) + 1)]
+        elif val:
+            temp = line[:(line.find(val) + len(val) + 1)]
+
+
+        # elif 'ML' in line:
+        #     temp = line[:(line.find('ML')) + 2]
+        # elif betObj.overUnder != "":
+        #     temp = line[:(line.find(betObj.overUnder) + len(betObj.overUnder) + 1)]
+        
+        #print('TEMP: ',temp)
+        return temp
+
 
 
 
@@ -107,71 +152,50 @@ class Scraper:
             url = entry[1]
             postedDate = entry[2]
             currentId = int(str(url)[str(url).find('cat') + 4 : str(url).find('cat=') + 7])
+            exclusive = ""
 
             if (date == postedDate) or (date == 'July 1, 2022'):
                 if currentId > updatedId:
                     updatedId = currentId     
 
-                
                 line = line[line.find('text that says') + 15:]
                 line = self.formatLine(line) 
-                print('LINE: ',line)
+                print('LINE: ', line)
 
                 if target in multiple_bets:
+                    if 'Exclusive Parlay' in line:
+                        exclusive = line[line.find('Exclusive') + 17 :]
+                        print('EXCLUSIVE:' ,exclusive)
+                        line = line[:line.find('Exclusive')]
                                     
                     betObj.getUnits(line)
-                    print('inital units:' ,betObj.units)
                     betObj.getOdds(line)
-                    print('inital odds:' ,betObj.odds)
-                    
-                    if betObj.units != "":
-                        if betObj.units == "1u" and line.find("1น") != -1:
-                            temp = line[:(line.find("1น") + 2)] 
-                        else:
-                            temp = line[:(line.find(betObj.units) + len(betObj.units) + 1)]
-                    elif betObj.odds != "":
-                        temp = line[:(line.find(betObj.odds) + len(betObj.odds) + 1)]
-                    elif 'parlay' in line.lower():
-                        temp = line
-                    elif 'ML' in line:
-                        temp = line[:(line.find('ML')) + 2]
-                       
-                    print('first line: ',temp)
-                        
-                    
-                    
+                    betObj.getOverUnder(line)
+
+                    temp = self.getTemp(betObj,line)
+                    #print('FIRST TEMP: ',temp)
+
+                
                     while temp != "":
-
-                        #betObj.readFile(target,url,postedDate,temp)
-                        betObj.getUnits(temp)
-                        betObj.getOverUnder(temp)
-                        betObj.getOdds(temp)
-                        betObj.getNumber(temp)
-                        betObj.getBetType(temp)
-                        betObj.getPick(temp)
-                        betObj.removeEmoji()
-                        betObj.getGameID()
-
-                        #betObj.readFile(target,url,postedDate,temp)
-                       
-                        
+                        self.process(betObj,temp)
 
                         # use this section to call specific functions for each capper
                         if target == 'bear_betting':
                             betObj.bearbetting()
-                        if target == 'thesystempicks':
+                        elif target == 'thesystempicks':
                             betObj.systempicks()
+                        elif target == 'vipcappinduck':
+                            betObj.cappinduck()
                         
                         betObj.updateTable(target,url,postedDate,currentId)
-                        
-
-                        print('pick: ', betObj.pick)
-                        # print('type: ', betObj.betType)
-                        # print('odds: ', betObj.odds)
-                        print('units: ',betObj.units)
-                        # print('over/under: ', betObj.overUnder)
-                        
                        
+                        #print("type: ",betObj.betType)
+                        #print("odds: ",betObj.odds)
+                        #print("units: ",betObj.units)
+                        #print("pick: ",betObj.pick)
+                        #print("over/under: ",betObj.overUnder)
+
+                        # reset the variables
                         betObj.betType = ""
                         betObj.odds = ""
                         betObj.units = ""
@@ -182,58 +206,30 @@ class Scraper:
                     
                         betObj.getUnits(line)
                         betObj.getOdds(line)
-                        
 
-                        if betObj.units != "":
-                            if betObj.units == "1u" and line.find("1น") != -1:
-                                temp = line[:(line.find("1น") + 2)]
-                            else:
-                                temp = line[:(line.find(betObj.units) + len(betObj.units) + 1)]
-                        elif betObj.odds != "":
-                            temp = line[:(line.find(betObj.odds) + len(betObj.odds) + 1)]
-                        elif 'parlay' in line.lower():
-                            temp = line
-                        elif 'ML' in line:
-                            temp = line[:(line.find('ML')) + 2]
+                        betObj.getOverUnder(line)
+                    
+                        temp = self.getTemp(betObj,line)
+       
 
-                
-                        else:
-                            break
-
-                        print('next: ',temp)
-                        
-
-                    print("------------------------------------------------------------------------------------------------------------------------")
 
                 else:
-                    #betObj.readFile(target,url,postedDate,line)
-                    betObj.getUnits(line)
-                    betObj.getOverUnder(line)
-                    betObj.getOdds(line)
-                    betObj.getNumber(line)
-                    betObj.getPick(line)
-                    betObj.getBetType(line)
-                    betObj.removeEmoji()
-                    betObj.getGameID()
-
-
+                    self.process(betObj,line)
+            
                     # use this section to call specific functions for each capper
                     if target == 'fanfanpodcast':
                         betObj.fanpodcast()
-                    elif target == 'cappinduck':
-                        betObj.cappinduck()
-
 
                     betObj.updateTable(target,url,postedDate,currentId)
-                    #betObj.readFile(target,url,postedDate,line)
-            #betObj.writeFile()
 
         return updatedId
 
 
-today = date.today().strftime("%B %d, %Y")
-day = 'July 1, 2022'
-Scraper('thesystempicks',day)
+today = date.today().strftime("%B %d, %Y") 
+day = 'July 1, 2022' #default all posts that are pulled
+# 30
+
+Scraper('vipcappinduck',day)
 
 
 

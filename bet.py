@@ -33,7 +33,6 @@ class Bet:
     
     # takes in one line of the text and searches for units
     def getUnits(self,line):
-        previous_word = ""
         split_words = line.split()
         for word in split_words:
             word = word.lower().strip(",")
@@ -63,16 +62,34 @@ class Bet:
     # takes in a line of text and checks each word for over/under values    
     # sets the pick and type values
     def getOverUnder(self,line):
-        for word in line.split():
+        print('LINE IN O/U: ',line)
+        previous = ""
+        split_words = line.split()
+        print(split_words)
+        for word in split_words:
+            print(word)
             word = word.lower().strip(",").strip()
+
+            if word == 'under':
+                print('************************************',word)
+                
             try:
-                if (word.startswith('o') or word.startswith('0')) and (float(word[1:])) or word == "over" or word.startswith('u') and \
-                        (float(word[1:])) or word == "under":
+                if (word.startswith('o') or word.startswith('0')) and (float(word[1:]))  or word.startswith('u') and \
+                        (float(word[1:])):
                     self.pick = line
-                    self.overUnder = word
                     self.betType = "total"
+                    self.overUnder = word
+                    return
+                if previous != "":         
+                    self.overUnder = previous + " " + word
+                    return
+                    
             except ValueError:
-                continue
+                next
+
+            previous = word
+        
+
 
 
     # checks the current pick and matches it to a game id from the endpoint
@@ -108,7 +125,7 @@ class Bet:
         for word in line.split():
             if (self.units in line) and (word in player_keywords): # checks if the line with the units is a pick
                 self. pick = line
-        print('pick method: ', self.pick)
+
 
         
         # check for keywords/ sports betting platforms for promo tweets
@@ -199,7 +216,7 @@ class Bet:
         temp_line = line.lower()
         if "money line" in temp_line or "moneyline" in temp_line or "ml" in temp_line:
             self.betType = "money line"
-            if self.odds != "":
+            if len(line.strip()) != 2:
                 self.pick = line
         if "game prop" in temp_line or "gameprop" in temp_line:
             self.betType = "game prop"
@@ -231,76 +248,28 @@ class Bet:
             
     # update a sample table for easy readability
     def updateTable(self,target,url,postedDate,sourceId):
-        entries = readDB(target)
-        print(self.pick)
-        print("- - - - - - - - -- - - ")
-        if "1น" in self.pick:
-            print(self.pick)
-            print(" ")
+
+        """ **** insert here ***** """
+    
+
+        entries = readDB(target) # reads pick,odds,units from database
+
         # formats the pick to remove the known values
         self.pick = self.pick.replace(self.odds, "").replace("1น","").replace(self.units, "").strip()
         self.pick = self.pick.replace(postedDate[postedDate.find(",")-1:], "").strip()
 
-
         if self.pick.find(postedDate[:postedDate.find(",")]) != -1:
             self.pick = self.pick.replace(postedDate[:postedDate.find(",")], "").strip()
         
+
         # reads the database, to the database
         if (self.pick,self.odds,self.units) in entries:
-            print("Duplicate Found")
-            
-        # if the varaibales are satified, a new bet entry is created and appended to the final list 
-        elif self.betType != "" and self.pick != "" and (self.units != "" or self.odds != "" ) or (self.odds == "" and target == 'fanfanpodcast'):        
-            writeDB(target,url,'instagram',postedDate, self.gameID,self.betType,self.odds,self.pick,self.units,postedDate,self.date,sourceId)
-            # print("SATISFIED DB")
-
-
-
-                                   
-
-    # opens the csv file and reads all of the bets and adds them to the pick list
-    # it also adds the new picks that were added to the final list into the pick list
-    # lastly it checks all of the variables and if there is enough information it creates a new entry and adds it to the final list to be written into the csv file
-    def readFile(self,user,url,postedDate,line):
-        # read picks in the file
-        with open('test2.csv', 'r', encoding='utf-8') as f:
-             csv_dict_reader = csv.DictReader(f)
-             for row in csv_dict_reader:
-                 self.pick_list.append((row['betPick'], row['username'], row['betOdds'], row['contentCreatedDate']))
-
-        # appends the entries in the final list to the pick list
-        for entry in self.final:
-             self.pick_list.append((entry['betPick'], entry['username'], entry['betOdds'], entry['contentCreatedDate']))
+            return
         
-    
-        self.pick = self.pick.replace(self.odds, "").replace("1น","").replace(self.units, "").replace("- ", "").strip()
-
-        # if the variables are satified, a new bet entry is created and appended to the final list 
-        if (self.pick,user,self.odds,postedDate) not in self.pick_list and self.betType != "" and self.pick != "" and (self.units != "" or self.odds != "" or (self.odds == "" and user == 'fanfanpodcast')) :
-            self.final.append({'username': user,'rawContent':line, 'betType': self.betType, 'reviewedTime': self.date, 
-                'betUnits': self.units, 'betOdds': self.odds, 'betPick': self.pick,'betGid':self.gameID,
-                'contentCreatedDate':postedDate,'contentSource': url})
+        # if the varaibales are satified, a new bet entry is created and appended to the final list 
+        elif self.betType != "" and self.pick != "" and (self.units != "" or self.odds != "" ) or (self.odds == "" and target == 'fanfanpodcast') or (self.betType == "money line" and target == "vipcappinduck") or (self.overUnder != "" and target == "vipcappinduck"):        
+            writeDB(target,url,'instagram',postedDate, self.gameID,self.betType,self.odds,self.pick,self.units,postedDate,self.date,sourceId)
             
-            # reset variables
-            self.pick = ""
-            if self.betType != 'parlay':
-                self.units = "" 
-                self.odds = ""
-
-
-    # writes the entries from the final list into the csv file
-    def writeFile(self):
-       
-        with open('test2.csv', 'a', encoding='utf-8') as f:
-            fieldnames = ['username','rawContent','betType', 'reviewedTime', 'betUnits', 'betOdds', 'betPick','betGid','contentCreatedDate','contentSource']
-            writer = csv.DictWriter(f, fieldnames=fieldnames)
-            writer.writeheader()
-            for entry in self.final:
-                writer.writerow(entry)
-
-
-
-
 
     # capper functions to fix any constant formatting problems
     def cappinduck(self):
@@ -314,10 +283,14 @@ class Bet:
         self.pick = self.pick[84:self.pick.find('#')]
     
     def systempicks(self):
-        # self.pick = self.pick.replace('DAILY CARD',"").strip()
-        # if ":" in self.pick:
-        #     self.pick = self.pick[self.pick.find(":") + 2: ]
-        # if "," in self.pick:
-        #     self.pick = self.pick[self.pick.find(",") + 1 :]
-        # self.pick = self.pick.replace("The System Picks.","")
-        pass
+        self.pick = self.pick.replace('DAILY CARD',"").strip()
+        if ":" in self.pick:
+            self.pick = self.pick[self.pick.find(":") + 2: ]
+        if "," in self.pick:
+            self.pick = self.pick[self.pick.find(",") + 1 :]
+        self.pick = self.pick.replace("The System Picks.","")
+
+    def cappinduck(self):
+        if self.pick.find('Exclusive Picks') != -1:
+            self.pick = self.pick[self.pick.find('Exclusive Picks') + 15 :].strip()
+    
