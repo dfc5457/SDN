@@ -1,5 +1,4 @@
 from datetime import date
-from datetime import datetime
 from selenium.webdriver.chrome.service import Service
 from selenium import webdriver
 from webdriver_manager.chrome import ChromeDriverManager
@@ -89,51 +88,33 @@ class Scraper:
             line = line.replace("-"," -")
         # while line.find('Picks') != -1:
         #     line = line[line.find('Picks') + 5 :].strip()
-        while line.find("............") != -1:
-            line = line.replace("............","")
+        # while line.find("............") != -1:
+        #     line = line.replace("............","")
         return line
 
     
-    # function takes in bet object and line of text
-    # calls all the necessary functions from bet class
-    def process(self,betObj,line):
-        betObj.getUnits(line)
-        betObj.getOverUnder(line)
-        betObj.getOdds(line)
-        betObj.getNumber(line)
-        betObj.getPick(line)
-        betObj.getBetType(line)
-        betObj.removeEmoji()
-        #betObj.getGameID()
 
     # function takes in bet object and line of text
     # sorts through known values to get the next possible bet in the line
     def getTemp(self,units,overUnder,odds,spread,line):
-        # val = ""
-        # minVal = len(line)
+        val = ""
+        minVal = len(line)
 
-        # for i in [units,'ML',overUnder,odds,spread]:
-        #     if line.find(i) < minVal and line.find(i) != 0 and line.find(i) != -1:
-        #         minVal = line.find(i)
-        #         val = i
+        for i in [units,'ML',overUnder,odds,spread]:
+            if line.find(i) < minVal and line.find(i) != 0 and line.find(i) != -1:
+                minVal = line.find(i)
+                val = i
 
         temp = ""
-
-        if line.find(units) != -1:
+        if units == val:
             if units == "1u" and line.find("1น") != -1:
-
-                temp = line[:(line.find("1น") + len(units) + 1)] 
+                temp = line[:(line.find("1น") + 2)] 
             else:
-
                 temp = line[:(line.find(units) + len(units) + 1)]
-        elif line.find(odds) != -1:
-            temp = line[:line.find(odds) + len(odds) + 1]
-        elif line.find(spread) != -1:
+        elif spread == val:
             temp = line[:line.find(spread) + len(spread) + 5]
-        elif line.find(overUnder) != -1:
-            temp = line[:(line.find(overUnder) + len(overUnder) + 1)]
-        elif line.fine('ML') != -1:
-            temp = line[:(line.find('ML') + 3)]
+        elif val:
+            temp = line[:(line.find(val) + len(val) + 1)]
         
         print('TEMP: ',temp)
         return temp
@@ -150,6 +131,7 @@ class Scraper:
         except ValueError:
             maxId = 100
         updatedId = maxId    
+
 
         for entry in self.list:
             line = entry[0]
@@ -183,7 +165,14 @@ class Scraper:
             
                 while temp != "":
 
-                    self.process(betObj,temp)
+                    betObj.getUnits(temp)
+                    betObj.getOverUnder(temp)
+                    betObj.getOdds(temp)
+                    betObj.getNumber(temp)
+                    betObj.getPick(temp)
+                    betObj.getBetType(temp)
+                    betObj.removeEmoji()
+
 
                     # use this section to call specific functions for each capper
                     if target == 'bear_betting':
@@ -192,8 +181,6 @@ class Scraper:
                         betObj.systempicks()
                     elif target == 'vipcappinduck':
                         betObj.cappinduck()
-                    elif target == 'fanfanpodcast':
-                        betObj.fanpodcast()
                     
 
                     print("units: ",betObj.units)
@@ -215,11 +202,13 @@ class Scraper:
                     betObj.odds = "" 
 
                     line = line[line.find(temp) + len(temp) : ]
-                
+                    print('CURRENT LINE: ',line)
+
                     betObj.getUnits(line)
                     betObj.getOdds(line)
                     betObj.getOverUnder(line)
                     betObj.getNumber(line)
+
                 
                     temp = self.getTemp(betObj.units,betObj.overUnder,betObj.odds,betObj.spreadValue,line)
 
@@ -228,24 +217,25 @@ class Scraper:
                         betObj.getOverUnder(exclusive)
                         betObj.getNumber(exclusive)
 
-                        temp = self.getTemp(betObj.units,betObj.overUnder,betObj.odds,betObj.spreadValue,exclusive)
+                        temp = self.getTemp(betObj,exclusive)
                         betObj.betType = "parlay"
 
                         exclusive = exclusive.replace(temp,"")
 
+                            
+
+            
+
         return updatedId
 
 
-today = date.today().strftime("%B %w, %Y") 
-day = 'August 06, 2022' #default all posts that are pulled
+today = date.today().strftime("%B %d, %Y") 
+day = 'July 30, 2022' #default all posts that are pulled
 # 30
 
-print(date.today().strftime("%Y-%m-%d") )
-print("******************************************************")
-
-
-#Scraper('vipcappinduck',today)
+#Scraper('vipcappinduck',day)
 #Scraper('fanfanpodcast',day)
-#Scraper('bear_betting',today)
+#Scraper('bear_betting',day)
+
 Scraper('thesystempicks',day)
 

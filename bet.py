@@ -14,7 +14,7 @@ from database import *
 # objects all have the methods to update a database and csv files with the found values
 class Bet:
     # constant values for an entire post
-    date = date.today()
+    date = date.today().strftime("%Y-%m-%d") 
     pick_list = []
     pick = ""
     odds = ""
@@ -52,7 +52,7 @@ class Bet:
                     return
 
             except ValueError:
-                continue
+                pass
 
             previous_word = word
 
@@ -62,32 +62,33 @@ class Bet:
     # takes in a line of text and checks each word for over/under values    
     # sets the pick and type values
     def getOverUnder(self,line):
-        print('LINE IN O/U: ',line)
         previous = ""
         split_words = line.split()
-        print(split_words)
-        for word in split_words:
-            print(word)
-            word = word.lower().strip(",").strip()
 
-            if word == 'under':
-                print('************************************',word)
-                
+        for word in split_words:
+        
+            if word == 'Under' or word == 'Over' or word == 'under' or word == 'over':
+                previous = word
+            
+            word = word.lower().strip(",").strip()
             try:
-                if (word.startswith('o') or word.startswith('0')) and (float(word[1:]))  or word.startswith('u') and \
+                if previous != "" and float(word):
+                    self.pick = line
+                    self.betType = "total"
+                    self.overUnder = previous + " " + word
+         
+                    return
+
+                elif (word.startswith('o') or word.startswith('0')) and (float(word[1:]))  or word.startswith('u') and \
                         (float(word[1:])):
                     self.pick = line
                     self.betType = "total"
                     self.overUnder = word
                     return
-                if previous != "":         
-                    self.overUnder = previous + " " + word
-                    return
-                    
-            except ValueError:
-                next
 
-            previous = word
+            except ValueError:
+                pass
+
         
 
 
@@ -137,7 +138,7 @@ class Bet:
             if float(self.pick):
                 self.pick = ""
         except ValueError:
-            next
+            pass
 
     # takes in a line of the text and filters the numbers to get the odds
     def getOdds(self,line):
@@ -154,8 +155,12 @@ class Bet:
                     self.odds = word
                     self.pick = line
                     return
+                if len(word) == 3 and float(word):
+                    self.odds = word
+                    self.pick = line
+                    return
             except ValueError:
-                continue
+                pass
     
         
     # takes in a line and sorts through all the numbers
@@ -164,13 +169,23 @@ class Bet:
         # filter the numbers
         temp_line = line.split()
         for word in temp_line:
+            word = word.strip()
+            if word.endswith("."):
+                word = word[:-1]
+
+            # spread value for player props
+            if word.endswith("+"):
+                self.spreadValue = word
+                self.pick = line[:line.find(word) + len(word) + 5]
+                return
+                
             try:
                 if float(word[word.find("-"):]) :
                     word = word[word.find("-"):]
                 elif float(word[word.find("+"):]) :
                     word = word[word.find("+"):]
             except ValueError:
-                continue
+                pass
 
             word = word.strip().lower()
 
@@ -181,18 +196,18 @@ class Bet:
                         self.spreadValue = word
                         self.betType = "spread"
                         self.pick = line
+                        return
+
                     elif len(word[1:]) <= 3 and "." in word:
                         self.spreadValue = word
                         self.betType = "spread"
                         self.pick = line
+                        return
                     
                 except ValueError:
-                    continue
+                    pass
 
-                # spread value for player props
-                if word.endswith("+") or word.endswith("-"):
-                    self.spreadValue = word
-                    self.pick = line
+
 
             # spread values without a + or -
             try:
@@ -200,9 +215,10 @@ class Bet:
                     self.spreadValue = word
                     self.betType = "spread"
                     self.pick = line
-
+                    return
+                    
             except ValueError:
-                continue
+                pass
 
           
 
@@ -267,8 +283,8 @@ class Bet:
             return
         
         # if the varaibales are satified, a new bet entry is created and appended to the final list 
-        elif self.betType != "" and self.pick != "" and (self.units != "" or self.odds != "" ) or (self.odds == "" and target == 'fanfanpodcast') or (self.betType == "money line" and target == "vipcappinduck") or (self.overUnder != "" and target == "vipcappinduck"):        
-            writeDB(target,url,'instagram',postedDate, self.gameID,self.betType,self.odds,self.pick,self.units,postedDate,self.date,sourceId)
+        elif self.betType != "" and self.pick != "" and (self.units != "" or self.odds != "" or self.spreadValue != "") or (self.odds == "" and target == 'fanfanpodcast') or (self.betType == "money line" and target == "vipcappinduck") or (self.overUnder != "" and target == "vipcappinduck"):        
+            writeDB(target,url,'instagram',postedDate, self.gameID,self.betType,self.odds,self.pick,self.units,self.date,self.date,sourceId)
             
 
     # capper functions to fix any constant formatting problems
